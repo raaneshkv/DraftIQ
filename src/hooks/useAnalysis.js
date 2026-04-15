@@ -10,20 +10,39 @@ export function useAnalysis() {
   const [error, setError] = useState(null)
   const [visibleSections, setVisibleSections] = useState([])
 
-  const analyze = useCallback(async (document, domain) => {
+  const analyze = useCallback(async (document, domain, goal) => {
     setState('analyzing')
     setError(null)
     setResults(null)
     setVisibleSections([])
 
     try {
-      const prompt = buildAnalysisPrompt(document, domain)
+      const prompt = buildAnalysisPrompt(document, domain, goal)
       const data = await analyzeDocument(null, document, domain, prompt)
 
-      // Set previous score from history
-      const storedHistory = JSON.parse(localStorage.getItem('draftiq_history') || '[]')
-      if (storedHistory.length > 0) {
-        data.previousScore = storedHistory[storedHistory.length - 1].overallScore
+      // Score Math calculation
+      const { clarity = 0, structure = 0, impact = 0, grammar = 0, vocabulary = 0, relevance = 0 } = data.scores || {}
+      const computedScore = Math.round(
+        0.25 * clarity +
+        0.20 * structure +
+        0.20 * impact +
+        0.15 * grammar +
+        0.10 * vocabulary +
+        0.10 * relevance
+      )
+      data.overallScore = computedScore
+
+      // Fetch history for previous score
+      try {
+        const storedHistory = JSON.parse(localStorage.getItem(
+          // Fetch from current valid storage matching AuthContext if possible, safely grab last
+          localStorage.getItem('draftiq_user') ? `draftiq_history_${JSON.parse(localStorage.getItem('draftiq_user')).email}` : 'draftiq_history_guest'
+        ) || '[]')
+        if (storedHistory.length > 0) {
+          data.previousScore = storedHistory[storedHistory.length - 1].overallScore
+        }
+      } catch (e) {
+        // ignore
       }
 
       setResults(data)

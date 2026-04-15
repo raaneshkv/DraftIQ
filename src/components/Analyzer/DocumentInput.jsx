@@ -2,8 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, Sparkles, Brain, FileUp } from 'lucide-react'
 
-export default function DocumentInput({ onAnalyze, domain, isAnalyzing, onSmartDetect }) {
-  const [text, setText] = useState('')
+export default function DocumentInput({ text, onChangeText, onAnalyze, domain, isAnalyzing, onSmartDetect }) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [showSmartDetect, setShowSmartDetect] = useState(false)
   const [placeholder, setPlaceholder] = useState('')
@@ -90,7 +89,7 @@ export default function DocumentInput({ onAnalyze, domain, isAnalyzing, onSmartD
         return
       }
       const reader = new FileReader()
-      reader.onload = (ev) => setText(ev.target.result)
+      reader.onload = (ev) => onChangeText(ev.target.result)
       reader.readAsText(file)
     }
   }, [])
@@ -112,7 +111,7 @@ export default function DocumentInput({ onAnalyze, domain, isAnalyzing, onSmartD
           <textarea
             ref={textareaRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => onChangeText(e.target.value)}
             placeholder={placeholder}
             rows={12}
             className="w-full bg-transparent px-8 py-8 text-text-primary placeholder-text-muted focus:outline-none resize-none text-lg leading-relaxed"
@@ -138,7 +137,7 @@ export default function DocumentInput({ onAnalyze, domain, isAnalyzing, onSmartD
                         return
                       }
                       const reader = new FileReader()
-                      reader.onload = (ev) => setText(ev.target.result)
+                      reader.onload = (ev) => onChangeText(ev.target.result)
                       reader.readAsText(file)
                     }
                   }}

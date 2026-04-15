@@ -8,13 +8,13 @@ import {
 const dimensionLabels = {
   clarity: 'Clarity',
   structure: 'Structure',
-  completeness: 'Completeness',
-  accuracy: 'Accuracy',
-  professionalQuality: 'Professional Quality',
-  audienceAlignment: 'Audience Alignment',
+  impact: 'Impact',
+  grammar: 'Grammar',
+  vocabulary: 'Vocabulary',
+  relevance: 'Relevance',
 }
 
-export default function RadarChartPanel({ scores }) {
+export default function RadarChartPanel({ scores, humanFeedback }) {
   const [selectedDim, setSelectedDim] = useState(null)
 
   const data = Object.entries(scores).map(([key, value]) => ({
@@ -120,11 +120,19 @@ export default function RadarChartPanel({ scores }) {
           <span className="text-sm text-text-secondary">
             <strong className="text-brand">{dimensionLabels[selectedDim]}</strong> scored{' '}
             <strong>{scores[selectedDim]}%</strong>.{' '}
-            {scores[selectedDim] < 60
-              ? 'This is below average. See the correction steps below for improvement guidance.'
-              : scores[selectedDim] < 80
-              ? 'Decent score with room for refinement. Check the suggestions below.'
-              : 'Strong performance! Minor polish may still be possible.'}
+            {humanFeedback?.[selectedDim] ? (
+              <span className="block mt-2 font-medium text-white p-3 bg-brand/10 border border-brand/20 rounded-lg">
+                "{humanFeedback[selectedDim]}"
+              </span>
+            ) : (
+              <span className="block mt-2">
+                {scores[selectedDim] < 60
+                  ? 'This is below average. See the correction steps below for improvement guidance.'
+                  : scores[selectedDim] < 80
+                  ? 'Decent score with room for refinement. Check the suggestions below.'
+                  : 'Strong performance! Minor polish may still be possible.'}
+              </span>
+            )}
           </span>
         </motion.div>
       )}

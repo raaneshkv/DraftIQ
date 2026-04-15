@@ -5,6 +5,8 @@ import Navbar from './components/Layout/Navbar'
 import HeroSection from './components/Hero/HeroSection'
 import AnalyzerPage from './pages/AnalyzerPage'
 import ProgressPage from './pages/ProgressPage'
+import { useAuth } from './context/AuthContext'
+import AuthModal from './components/Auth/AuthModal'
 
 export const AppContext = createContext()
 
@@ -14,16 +16,30 @@ export function useApp() {
 
 function App() {
   const location = useLocation()
+  const { currentUser } = useAuth()
   const [hasAnalysis, setHasAnalysis] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  
+  // Scope history to the current user
   const [analysisHistory, setAnalysisHistory] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('draftiq_history') || '[]')
+      const historyId = currentUser ? `draftiq_history_${currentUser.email}` : 'draftiq_history_guest'
+      return JSON.parse(localStorage.getItem(historyId) || '[]')
     } catch { return [] }
   })
 
+  // When user changes, reload history
   useEffect(() => {
-    localStorage.setItem('draftiq_history', JSON.stringify(analysisHistory))
-  }, [analysisHistory])
+    const historyId = currentUser ? `draftiq_history_${currentUser.email}` : 'draftiq_history_guest'
+    try {
+      setAnalysisHistory(JSON.parse(localStorage.getItem(historyId) || '[]'))
+    } catch { setAnalysisHistory([]) }
+  }, [currentUser])
+
+  useEffect(() => {
+    const historyId = currentUser ? `draftiq_history_${currentUser.email}` : 'draftiq_history_guest'
+    localStorage.setItem(historyId, JSON.stringify(analysisHistory))
+  }, [analysisHistory, currentUser])
 
   const addToHistory = (result) => {
     setAnalysisHistory(prev => [...prev, { ...result, timestamp: Date.now() }])
@@ -33,7 +49,8 @@ function App() {
     analysisHistory,
     addToHistory,
     hasAnalysis,
-    setHasAnalysis
+    setHasAnalysis,
+    setIsAuthModalOpen
   }
 
   return (
@@ -48,13 +65,18 @@ function App() {
         <Navbar />
         <div className="relative z-10 w-full h-full">
           <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="/" element={<HeroSection />} />
-            <Route path="/analyze" element={<AnalyzerPage />} />
-            <Route path="/progress" element={<ProgressPage />} />
-          </Routes>
-        </AnimatePresence>
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<HeroSection />} />
+              <Route path="/analyze" element={<AnalyzerPage />} />
+              <Route path="/progress" element={<ProgressPage />} />
+            </Routes>
+          </AnimatePresence>
         </div>
+        
+        <AuthModal 
+          isOpen={isAuthModalOpen} 
+          onClose={() => setIsAuthModalOpen(false)} 
+        />
       </div>
     </AppContext.Provider>
   )

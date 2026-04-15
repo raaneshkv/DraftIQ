@@ -49,10 +49,10 @@ export default function ProgressPage() {
   const dimLabels = {
     clarity: 'Clarity',
     structure: 'Structure',
-    completeness: 'Completeness',
-    accuracy: 'Accuracy',
-    professionalQuality: 'Professional Quality',
-    audienceAlignment: 'Audience Alignment',
+    impact: 'Impact',
+    grammar: 'Grammar',
+    vocabulary: 'Vocabulary',
+    relevance: 'Relevance',
   }
 
   return (

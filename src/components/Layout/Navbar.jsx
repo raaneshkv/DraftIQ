@@ -1,11 +1,13 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Settings, BrainCircuit } from 'lucide-react'
+import { BrainCircuit, User, LogOut } from 'lucide-react'
 import { useApp } from '../../App'
+import { useAuth } from '../../context/AuthContext'
 
 export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { hasAnalysis } = useApp()
+  const { hasAnalysis, setIsAuthModalOpen } = useApp()
+  const { currentUser, logout } = useAuth()
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-bg border-b border-border">
@@ -31,6 +33,32 @@ export default function Navbar() {
           </NavLink>
 
           <div className="w-px h-4 bg-border mx-2" />
+
+          {/* Auth Button */}
+          {currentUser ? (
+            <div className="flex items-center gap-4">
+              <div className="text-sm border border-border px-3 py-1.5 rounded-full flex items-center gap-2 text-text-secondary bg-surface/50">
+                <User className="w-4 h-4" />
+                <span>{currentUser.name}</span>
+              </div>
+              <button
+                onClick={logout}
+                className="text-text-secondary hover:text-danger transition-colors p-1"
+                title="Log out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-md bg-transparent border border-brand/50 text-brand hover:bg-brand/10 font-semibold text-sm transition-all"
+            >
+              Sign In
+            </button>
+          )}
+
+          <div className="w-px h-4 bg-border mx-2 hidden sm:block" />
 
           {/* Primary CTA */}
           <button

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useApp } from '../App'
 import { useAnalysis } from '../hooks/useAnalysis'
 import DomainSelector from '../components/Analyzer/DomainSelector'
+import GoalSelector from '../components/Analyzer/GoalSelector'
 import DocumentInput from '../components/Analyzer/DocumentInput'
 import LoadingOverlay from '../components/Analyzer/LoadingOverlay'
 import ScoreOverview from '../components/Results/ScoreOverview'
@@ -17,6 +18,8 @@ import { AlertCircle, RotateCcw, ArrowLeft, Sparkles } from 'lucide-react'
 
 export default function AnalyzerPage() {
   const [domain, setDomain] = useState('General')
+  const [goal, setGoal] = useState('Score high')
+  const [documentText, setDocumentText] = useState('')
   const { analysisHistory, apiKey, setShowApiModal, setHasAnalysis } = useApp()
   const { state, results, error, visibleSections, analyze, reset } = useAnalysis()
 
@@ -25,8 +28,15 @@ export default function AnalyzerPage() {
   }, [state, results, setHasAnalysis])
 
   const handleAnalyze = (text) => {
-    // API key check moved to useAnalysis/groqApi
-    analyze(text, domain)
+    setDocumentText(text)
+    analyze(text, domain, goal)
+  }
+
+  const handleAutoImprove = () => {
+    if (results && results.improvedDocument) {
+      setDocumentText(results.improvedDocument)
+      reset() // Reset the view to show the editor with the improved text
+    }
   }
 
   return (
@@ -57,8 +67,23 @@ export default function AnalyzerPage() {
               </p>
             </motion.div>
 
-            <DomainSelector selected={domain} onChange={setDomain} />
-            <DocumentInput onAnalyze={handleAnalyze} domain={domain} isAnalyzing={state === 'analyzing'} onSmartDetect={setDomain} />
+            <div className="flex flex-col sm:flex-row gap-6 mb-6">
+              <div className="flex-1">
+                <DomainSelector selected={domain} onChange={setDomain} />
+              </div>
+              <div className="flex-1">
+                <GoalSelector selected={goal} onChange={setGoal} />
+              </div>
+            </div>
+            
+            <DocumentInput 
+              text={documentText}
+              onChangeText={setDocumentText}
+              onAnalyze={handleAnalyze} 
+              domain={domain} 
+              isAnalyzing={state === 'analyzing'} 
+              onSmartDetect={setDomain} 
+            />
 
             {/* Error state */}
             {state === 'error' && error && (
@@ -89,25 +114,35 @@ export default function AnalyzerPage() {
         {/* Results Dashboard Layout */}
         {(state === 'results' || (state === 'analyzing' && results)) && results && (
           <div className="space-y-8 relative z-10 w-full max-w-6xl mx-auto mt-8">
-            {/* Back button */}
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              onClick={reset}
-              className="group flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors mb-4"
-            >
-              <ArrowLeft className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-              New Analysis
-            </motion.button>
+            {/* Back button and Iterative Buttons */}
+            <div className="flex items-center justify-between mb-6">
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={reset}
+                className="group flex items-center gap-2 text-sm text-text-secondary hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                New Analysis
+              </motion.button>
+              
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={handleAutoImprove}
+                className="group flex items-center gap-2 text-sm font-semibold bg-brand/20 text-brand-light border border-brand/50 hover:bg-brand/30 px-3 py-1.5 rounded-lg transition-colors shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+              >
+                <Sparkles className="w-4 h-4" />
+                Auto Improve Document
+              </motion.button>
+            </div>
 
             {/* Top Section */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
               {visibleSections.includes('score') && (
                 <div className="lg:col-span-8">
                   <ScoreOverview
-                    overallScore={results.overallScore}
-                    previousScore={results.previousScore}
-                    confidence={results.confidence}
+                    results={results}
                   />
                 </div>
               )}
@@ -125,7 +160,7 @@ export default function AnalyzerPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
               {visibleSections.includes('radar') && (
                 <div className="lg:col-span-4">
-                  <RadarChartPanel scores={results.scores} />
+                  <RadarChartPanel scores={results.scores} humanFeedback={results.humanFeedback} />
                 </div>
               )}
               {visibleSections.includes('sections') && (

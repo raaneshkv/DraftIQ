@@ -55,11 +55,11 @@ export default function GuidedCorrection({ issues }) {
               >
                 <div className="flex items-center gap-3 text-left">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${
-                    issue.severity === 'HIGH' ? 'bg-danger/15 text-danger' :
-                    issue.severity === 'MEDIUM' ? 'bg-warning/15 text-warning' :
+                    (issue.scoreImpactValue >= 8) ? 'bg-danger/15 text-danger' :
+                    (issue.scoreImpactValue >= 4) ? 'bg-warning/15 text-warning' :
                     'bg-blue-500/15 text-blue-400'
                   }`}>
-                    {issue.severity}
+                    {issue.scoreImpactValue ? `+${issue.scoreImpactValue} Score` : 'Issue'}
                   </span>
                   <span className="text-sm text-text-primary font-medium">{issue.issue}</span>
                 </div>
