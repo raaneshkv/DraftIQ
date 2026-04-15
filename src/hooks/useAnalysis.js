@@ -1,6 +1,11 @@
 import { useState, useCallback } from 'react'
 import { analyzeDocument } from '../services/groqApi'
-import { buildAnalysisPrompt } from '../services/prompts'
+import { buildAnalysisPrompt, buildGrammarCorrectionPrompt } from '../services/prompts'
+import DocumentClassifier from '../ml/DocumentClassifier'
+import WritingScorer from '../ml/WritingScorer'
+import ReadabilityModel from '../ml/ReadabilityModel'
+import IntentAligner from '../ml/IntentAligner'
+import PatternAnalyzer from '../ml/PatternAnalyzer'
 import { useApp } from '../App'
 
 export function useAnalysis() {
@@ -17,20 +22,58 @@ export function useAnalysis() {
     setVisibleSections([])
 
     try {
-      const prompt = buildAnalysisPrompt(document, domain, goal)
-      const data = await analyzeDocument(null, document, domain, prompt)
+      // 1. Run Local ML Document Classification
+      const classificationData = DocumentClassifier.classify(document)
 
-      // Score Math calculation
-      const { clarity = 0, structure = 0, impact = 0, grammar = 0, vocabulary = 0, relevance = 0 } = data.scores || {}
-      const computedScore = Math.round(
-        0.25 * clarity +
-        0.20 * structure +
-        0.20 * impact +
-        0.15 * grammar +
-        0.10 * vocabulary +
-        0.10 * relevance
-      )
-      data.overallScore = computedScore
+      const adjustedDomain = classificationData.domain || domain
+      const enrichedGoal = `${goal}. Note: This document appears to be a ${classificationData.document_type || 'document'} aimed at a ${classificationData.audience || 'general'} audience.`
+
+      // Execute Local Analytical Models
+      const audienceAlignmentData = ReadabilityModel.evaluate(document, goal)
+      const intentAlignmentData = IntentAligner.evaluate(document, adjustedDomain)
+      const learningProfileData = PatternAnalyzer.evaluate(document)
+
+      // 2. Run Deterministic Grammar Pipeline (LLM)
+      let grammarData = null
+      let analysisDocument = document
+      try {
+        const grammarPrompt = buildGrammarCorrectionPrompt(document)
+        grammarData = await analyzeDocument(null, document, adjustedDomain, grammarPrompt)
+        
+        if (grammarData?.corrected_text) {
+           // We secure the CLEAN DATA for the main AI reasoning!
+           analysisDocument = grammarData.corrected_text
+        }
+      } catch (e) {
+        console.warn('Deterministic Grammar Model failed', e)
+      }
+
+      // Calculate brutal math heuristics FIRST
+      const scoringData = WritingScorer.evaluate(document)
+
+      // 3. Run Main Analysis with Pristine Data (anchoring AI explanations to strict math)
+      const prompt = buildAnalysisPrompt(analysisDocument, adjustedDomain, enrichedGoal, scoringData)
+      const data = await analyzeDocument(null, analysisDocument, adjustedDomain, prompt)
+      
+      // Inject pipelined metadata into final results
+      data.classification = classificationData
+      data.grammarStats = grammarData
+      data.audienceAlignment = audienceAlignmentData
+      data.intentAlignment = intentAlignmentData
+      data.learningProfile = learningProfileData
+
+      // We scale the 0-20 dimensions by x5 to plot beautifully on the 0-100 UI Radar chart
+      data.scores = {
+        clarity: scoringData.clarity * 5,
+        coherence: scoringData.coherence * 5,
+        grammar: scoringData.grammar * 5,
+        vocabulary: scoringData.vocabulary * 5,
+        structure: scoringData.structure * 5
+      }
+      
+      // The overall score is securely the sum of the strict 0-20 heuristics
+      data.overallScore = scoringData.overall_score
+      data.confidence = Math.round(scoringData.confidence * 100)
 
       // Fetch history for previous score
       try {

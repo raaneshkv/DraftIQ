@@ -9,7 +9,7 @@ function getScoreColor(score) {
 }
 
 export default function ScoreOverview({ results }) {
-  const { overallScore, previousScore, confidence, explainableAI, audienceAlignment, writingStyle, documentType, benchmarking, scores } = results || {}
+  const { overallScore, previousScore, confidence, explainableAI, audienceAlignment, intentAlignment, writingStyle, documentType, benchmarking, scores } = results || {}
   
   const [displayScore, setDisplayScore] = useState(0)
   const [showFormula, setShowFormula] = useState(false)
@@ -66,9 +66,9 @@ export default function ScoreOverview({ results }) {
                 Tone: {writingStyle.tone}
               </span>
             )}
-            {audienceAlignment?.level && (
+            {audienceAlignment?.grade_level !== undefined && (
               <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-text-secondary text-xs font-medium">
-                Audience: {audienceAlignment.level}
+                Grade Level: {audienceAlignment.grade_level}
               </span>
             )}
           </div>
@@ -105,6 +105,17 @@ export default function ScoreOverview({ results }) {
                 Confidence: {confidence}%
               </span>
             </div>
+
+            {results?.grammarStats?.num_errors !== undefined && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-light border border-border">
+                <span className="text-sm font-semibold text-danger">
+                  {results.grammarStats.num_errors} Errors Fixed
+                </span>
+                <span className="text-xs text-text-muted">
+                  (Density: {results.grammarStats.error_density})
+                </span>
+              </div>
+            )}
 
             {benchmarking?.percentBetterThan && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gradient-to-r from-accent/20 to-brand/20 border border-brand/30">
@@ -166,32 +177,28 @@ export default function ScoreOverview({ results }) {
               >
                 <div className="p-4 rounded-lg bg-body/50 font-mono text-xs text-text-muted space-y-2 border border-border">
                   <div className="flex justify-between border-b border-border/50 pb-2">
-                    <span>Algorithm Weights</span>
-                    <span>Value</span>
+                    <span>Mathematical Dimension</span>
+                    <span>Local Evaluation</span>
                   </div>
                   <div className="flex justify-between hover:text-brand-light transition-colors">
-                    <span>0.25 × Clarity (Score: {scores?.clarity})</span>
-                    <span>{Math.round(0.25 * (scores?.clarity || 0))}</span>
+                    <span>Clarity heuristics (0-20)</span>
+                    <span>{Math.round((scores?.clarity || 0) / 5)} pts</span>
                   </div>
                   <div className="flex justify-between hover:text-brand-light transition-colors">
-                    <span>0.20 × Structure (Score: {scores?.structure})</span>
-                    <span>{Math.round(0.20 * (scores?.structure || 0))}</span>
+                    <span>Coherence mapping (0-20)</span>
+                    <span>{Math.round((scores?.coherence || 0) / 5)} pts</span>
                   </div>
                   <div className="flex justify-between hover:text-brand-light transition-colors">
-                    <span>0.20 × Impact (Score: {scores?.impact})</span>
-                    <span>{Math.round(0.20 * (scores?.impact || 0))}</span>
+                    <span>Grammatical syntax (0-20)</span>
+                    <span>{Math.round((scores?.grammar || 0) / 5)} pts</span>
                   </div>
                   <div className="flex justify-between hover:text-brand-light transition-colors">
-                    <span>0.15 × Grammar (Score: {scores?.grammar})</span>
-                    <span>{Math.round(0.15 * (scores?.grammar || 0))}</span>
+                    <span>Vocabulary diversity (0-20)</span>
+                    <span>{Math.round((scores?.vocabulary || 0) / 5)} pts</span>
                   </div>
                   <div className="flex justify-between hover:text-brand-light transition-colors">
-                    <span>0.10 × Vocabulary (Score: {scores?.vocabulary})</span>
-                    <span>{Math.round(0.10 * (scores?.vocabulary || 0))}</span>
-                  </div>
-                  <div className="flex justify-between hover:text-brand-light transition-colors">
-                    <span>0.10 × Relevance (Score: {scores?.relevance})</span>
-                    <span>{Math.round(0.10 * (scores?.relevance || 0))}</span>
+                    <span>Structural framework (0-20)</span>
+                    <span>{Math.round((scores?.structure || 0) / 5)} pts</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-border/50 text-white font-bold">
                     <span>Final Calculated Score</span>
@@ -233,11 +240,21 @@ export default function ScoreOverview({ results }) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {audienceAlignment && (
                         <div className="p-4 rounded-lg bg-body/50 border border-border">
-                          <h4 className="font-semibold text-white mb-2 text-xs uppercase tracking-wider flex items-center gap-2">
-                            Audience Detection
+                          <h4 className="font-semibold text-brand-light mb-2 text-xs uppercase tracking-wider flex items-center gap-2">
+                            Audience Readability Evaluator
                           </h4>
-                          <p className="text-text-secondary text-sm mb-3">{audienceAlignment.feedback}</p>
-                          <ul className="space-y-1">
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            <span className={`px-2 py-1 text-[10px] uppercase tracking-wider font-semibold rounded-md border ${audienceAlignment.audience_match ? 'bg-success/10 border-success/30 text-success' : 'bg-danger/10 border-danger/30 text-danger'}`}>
+                              {audienceAlignment.audience_match ? 'Target Hit' : 'Target Missed'}
+                            </span>
+                            <span className="px-2 py-1 text-[10px] uppercase font-semibold border border-white/10 rounded-md">
+                              Readability: {audienceAlignment.readability_score} / 100
+                            </span>
+                          </div>
+                          <p className="text-text-secondary text-sm mb-3">
+                            <strong className="text-white">Gap: {audienceAlignment.difficulty_gap > 0 ? '+' : ''}{audienceAlignment.difficulty_gap} levels.</strong> {audienceAlignment.feedback}
+                          </p>
+                          <ul className="space-y-1 mt-3 pt-3 border-t border-border">
                             {audienceAlignment.features?.map((f, i) => (
                               <li key={i} className="text-xs text-text-muted flex items-start gap-1.5">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-brand shrink-0 mt-0.5" />
@@ -245,6 +262,36 @@ export default function ScoreOverview({ results }) {
                               </li>
                             ))}
                           </ul>
+                        </div>
+                      )}
+
+                      {intentAlignment && (
+                        <div className="p-4 rounded-lg bg-body/50 border border-border">
+                          <h4 className="font-semibold text-brand-light mb-2 text-xs uppercase tracking-wider flex items-center gap-2">
+                            Intent Alignment Expert Matrix
+                          </h4>
+                          <div className="space-y-2 text-sm text-text-secondary">
+                            <div className="flex justify-between items-center bg-white/5 px-3 py-1.5 rounded">
+                              <span>Tone Match</span>
+                              <span className="font-mono text-white">{intentAlignment.tone_score}/25</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/5 px-3 py-1.5 rounded">
+                              <span>Structure Compliance</span>
+                              <span className="font-mono text-white">{intentAlignment.structure_score}/25</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/5 px-3 py-1.5 rounded">
+                              <span>Content Relevance</span>
+                              <span className="font-mono text-white">{intentAlignment.relevance_score}/25</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/5 px-3 py-1.5 rounded">
+                              <span>Purpose Fulfillment</span>
+                              <span className="font-mono text-white">{intentAlignment.purpose_score}/25</span>
+                            </div>
+                            <div className="flex justify-between items-center border-t border-border pt-2 mt-2 font-bold text-white">
+                              <span>Total Vector Alignment</span>
+                              <span>{intentAlignment.alignment_score}%</span>
+                            </div>
+                          </div>
                         </div>
                       )}
                       

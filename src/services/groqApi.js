@@ -1,10 +1,10 @@
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
-const MODEL = 'llama-3.3-70b-versatile'
+const MODEL = 'qwen/qwen3-32b'
 
-export async function analyzeDocument(providedKey, documentText, domain, prompt) {
+export async function analyzeDocument(providedKey, documentText, domain, prompt, retries = 1) {
   // Use the environment variable containing the developer's API key
   // This ensures the end-user never has to enter a key.
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY
+  const apiKey = providedKey || import.meta.env.VITE_GROQ_API_KEY
 
   if (!apiKey) {
     throw new Error('VITE_GROQ_API_KEY is missing from your .env file! Please add it to use the live API.')
@@ -29,12 +29,17 @@ export async function analyzeDocument(providedKey, documentText, domain, prompt)
         }
       ],
       temperature: 0.3,
-      max_tokens: 4096,
+      max_tokens: 2048,
       response_format: { type: 'json_object' },
     }),
   })
 
   if (!response.ok) {
+    if (response.status === 429 && retries > 0) {
+      console.warn('Groq Rate Limit hit (429). Stalling for 6.5 seconds to bypass Tokens-Per-Minute queue...')
+      await new Promise(r => setTimeout(r, 6500))
+      return analyzeDocument(providedKey, documentText, domain, prompt, retries - 1)
+    }
     const err = await response.json().catch(() => ({}))
     throw new Error(err.error?.message || `Groq API error: ${response.status}`)
   }

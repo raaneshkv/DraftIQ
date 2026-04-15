@@ -1,4 +1,4 @@
-export function buildAnalysisPrompt(document, domain, goal) {
+export function buildAnalysisPrompt(document, domain, goal, scoringData) {
   const domainWeights = {
     'Technical Report': 'Emphasize accuracy, completeness, and structure. Technical reports need precise language, clear methodology, and well-organized sections.',
     'Essay': 'Emphasize clarity, argument flow, thesis strength, and persuasiveness. Essays need strong introductions and conclusions.',
@@ -9,16 +9,39 @@ export function buildAnalysisPrompt(document, domain, goal) {
 
   const goalContext = goal ? `The author's primary goal is to: ${goal}. Tailor your feedback heavily towards achieving this goal.` : ''
 
+  const mathContext = scoringData ? `
+CRITICAL CONTEXT FOR HUMAN FEEDBACK:
+An objective offline mathematical algorithm has ALREADY safely evaluated this document. You MUST align your "humanFeedback" explanations EXACTLY with these brutal algorithm scores:
+- Clarity Score: ${scoringData.clarity}/20
+- Coherence Score: ${scoringData.coherence}/20
+- Grammar Score: ${scoringData.grammar}/20
+- Vocabulary Score: ${scoringData.vocabulary}/20
+- Structure Score: ${scoringData.structure}/20
+
+If a score is extremely low (e.g., < 10/20), your explanation inside the 'humanFeedback' object MUST jump straight into harsh, direct criticism identifying exactly why it failed structurally. Under no circumstances should you praise a text that scored poorly in these parameters.` : ''
+
   return `Analyze the following document as a ${domain} document.
 Domain context: ${domainWeights[domain] || domainWeights['General']}
 ${goalContext}
+${mathContext}
 
 DOCUMENT:
 """
 ${document}
 """
 
-Analyze this document comprehensively and return a JSON object with EXACTLY this structure:
+MIXTURE OF EXPERTS RUBRIC INSTRUCTIONS:
+
+1. SEMANTIC COHERENCE EXPERT:
+- Evaluate sentence-to-sentence transitions. Penalize abrupt topic shifts and reward logical progression.
+- Combine this insight into the "coherence" key of the "humanFeedback" block.
+
+2. EXPERT WRITING COACH (SUGGESTIONS GENERATOR):
+- Give ONLY specific, actionable suggestions.
+- Avoid generic advice completely.
+- Limit to the top 5 highest-impact improvements. Output these in the "issues" array.
+
+Analyze this document using the expert rubrics above and return a JSON object with EXACTLY this structure:
 
 {
   "confidence": <number 0-100 indicating AI confidence in this analysis>,
@@ -27,26 +50,13 @@ Analyze this document comprehensively and return a JSON object with EXACTLY this
     "tone": "<e.g., Formal, Persuasive, Informal, Technical>",
     "feedback": "<brief feedback on the tone and if it suits the domain>"
   },
-  "audienceAlignment": {
-    "level": "<School | College | Professional | Research>",
-    "feedback": "<e.g., 'Content is suitable for college-level but lacks depth for research audience'>",
-    "features": ["<e.g. High vocabulary complexity>", "<e.g. Long sentence length>"]
-  },
-  "scores": {
-    "clarity": <number 0-100>,
-    "structure": <number 0-100>,
-    "impact": <number 0-100>,
-    "grammar": <number 0-100>,
-    "vocabulary": <number 0-100>,
-    "relevance": <number 0-100>
-  },
+
   "humanFeedback": {
-    "clarity": "<human-like conversational feedback explaining this specific score, e.g., 'Your argument lacks logical transitions...'>",
-    "structure": "<human-like explanation>",
-    "impact": "<human-like explanation>",
+    "clarity": "<human-like conversational feedback explaining this specific dimension, e.g., 'Your argument lacks logical transitions...'>",
+    "coherence": "<human-like explanation>",
     "grammar": "<human-like explanation>",
     "vocabulary": "<human-like explanation>",
-    "relevance": "<human-like explanation>"
+    "structure": "<human-like explanation>"
   },
   "explainableAI": {
     "modelReasoning": "<A detailed explanation of why these scores were assigned overall based on the input text>",
@@ -90,18 +100,43 @@ Analyze this document comprehensively and return a JSON object with EXACTLY this
       "passed": <boolean true or false>
     }
   ],
-  "learningProfile": {
-    "weakArea": "<primary weak area>",
-    "pattern": "<observed writing pattern, e.g., 'Frequent passive voice usage detected'>",
-    "tip": "<actionable improvement tip>"
-  },
-  "improvedDocument": "<Return the COMPLETE uploaded document, fully rewritten and edited to exceptional quality, fixing all grammar issues, improving vocabulary, structure, and flow to match the specific domain and goal. Do NOT truncate or abbreviate.>"
+
+  "improvedDocument": "<START WRITING THE ACTUAL ESSAY HERE FROM THE AUTHOR'S POINT OF VIEW. Do NOT provide feedback. Do NOT provide critique. Just write the improved essay itself. For example: 'I am writing this application because...'>"
 }
 
 Important rules:
-1. Be thorough and identify ALL issues, not just obvious ones.
-2. Provide at least 3-5 issues in the issues list. Rank issues by scoreImpactValue (highest impact first).
+1. The issues array MUST contain exactly 3-5 specific, highly actionable items. Rank issues by scoreImpactValue (highest impact first).
+2. The "improvedDocument" field is intentionally empty. You MUST write the ENTIRE rewritten, grammatically-perfect version of the user's document into this field! Do not leave it blank. You MUST NOT place any feedback, critique, or tips in this field. It must be strictly the author's narrative, fully fixed and rewritten.
 3. The humanFeedback should sound like a real mentor speaking directly to the user (use 'you', 'your'). 
 4. The beforeAfter should show specific text improvements AND explain why it's better.
 5. Return ONLY valid JSON, no markdown, no code blocks.`
+}
+
+export function buildGrammarCorrectionPrompt(input_text) {
+  return `You are a deterministic grammar correction engine.
+
+STRICT RULES:
+- Fix ONLY grammatical, punctuation, and syntax errors
+- DO NOT change meaning, tone, or sentence structure unnecessarily
+- DO NOT rewrite stylistically
+- Preserve original wording as much as possible
+- Each correction must correspond to a real error
+
+TASK:
+1. Provide corrected text
+2. Count number of corrections
+3. Maintain alignment with original text
+
+Text:
+"""
+\${input_text}
+"""
+
+Output JSON ONLY:
+{
+  "corrected_text": "",
+  "num_errors": 0,
+  "error_density": 0.0,
+  "confidence": 0.0
+}`
 }

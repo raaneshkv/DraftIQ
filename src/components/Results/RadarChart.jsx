@@ -7,11 +7,10 @@ import {
 
 const dimensionLabels = {
   clarity: 'Clarity',
-  structure: 'Structure',
-  impact: 'Impact',
+  coherence: 'Coherence',
   grammar: 'Grammar',
   vocabulary: 'Vocabulary',
-  relevance: 'Relevance',
+  structure: 'Structure',
 }
 
 export default function RadarChartPanel({ scores, humanFeedback }) {
