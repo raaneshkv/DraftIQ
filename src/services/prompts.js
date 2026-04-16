@@ -101,15 +101,16 @@ Analyze this document using the expert rubrics above and return a JSON object wi
     }
   ],
 
-  "improvedDocument": "<START WRITING THE ACTUAL ESSAY HERE FROM THE AUTHOR'S POINT OF VIEW. Do NOT provide feedback. Do NOT provide critique. Just write the improved essay itself. For example: 'I am writing this application because...'>"
+  "improvedDocument": "[INSERT_REWRITTEN_TEXT]"
 }
 
 Important rules:
 1. The issues array MUST contain exactly 3-5 specific, highly actionable items. Rank issues by scoreImpactValue (highest impact first).
-2. The "improvedDocument" field is intentionally empty. You MUST write the ENTIRE rewritten, grammatically-perfect version of the user's document into this field! Do not leave it blank. You MUST NOT place any feedback, critique, or tips in this field. It must be strictly the author's narrative, fully fixed and rewritten.
-3. The humanFeedback should sound like a real mentor speaking directly to the user (use 'you', 'your'). 
-4. The beforeAfter should show specific text improvements AND explain why it's better.
-5. Return ONLY valid JSON, no markdown, no code blocks.`
+2. For the "improvedDocument" key, you MUST replace "[INSERT_REWRITTEN_TEXT]" with the fully polished, rewritten version of the user's original text. DO NOT leave it empty.
+3. ANTI-HALLUCINATION STRICT RULE: If the original text is extremely short, vague, or incomplete (e.g., "test", "hello"), DO NOT invent fake content, do NOT add dummy placeholders like "Topic A", and do NOT try to generate a full essay from it. ONLY revise the exact words the user provided.
+4. The humanFeedback should sound like a real mentor speaking directly to the user (use 'you', 'your'). 
+5. The beforeAfter should show specific text improvements AND explain why it's better.
+6. Return ONLY valid JSON, no markdown, no code blocks.`
 }
 
 export function buildGrammarCorrectionPrompt(input_text) {
@@ -132,11 +133,11 @@ Text:
 \${input_text}
 """
 
-Output JSON ONLY:
-{
-  "corrected_text": "",
-  "num_errors": 0,
-  "error_density": 0.0,
-  "confidence": 0.0
-}`
+Output JSON ONLY containing exactly the following keys:
+- "corrected_text": (string) You MUST output the fully corrected text here. If there are ZERO grammar errors, it MUST literally contain the exact original text. NEVER leave it empty.
+- "num_errors": (number) The count of errors fixed.
+- "error_density": (number) Float density of errors.
+- "confidence": (number)
+
+Do not use placeholders, and do not provide an empty string for corrected_text.`
 }

@@ -28,6 +28,14 @@ class WritingScorer {
     vocabulary *= lengthPenalty;
     structure *= lengthPenalty;
 
+    // Apply strict penalties for informal/basic high-frequency words common in weak drafts
+    const basicWordsCount = (text.toLowerCase().match(/\b(good|bad|really|very|things|actually|basically)\b/g) || []).length;
+    if (basicWordsCount >= 2) {
+      vocabulary = Math.max(0, vocabulary - (basicWordsCount * 2));
+      coherence = Math.max(0, coherence - (basicWordsCount * 1.5));
+      clarity = Math.max(0, clarity - 3);
+    }
+
     const overall_score = Math.round(clarity + coherence + grammar + vocabulary + structure);
 
     return {

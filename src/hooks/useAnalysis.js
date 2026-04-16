@@ -35,15 +35,14 @@ export function useAnalysis() {
 
       // 2. Run Deterministic Grammar Pipeline (LLM)
       let grammarData = null
-      let analysisDocument = document
+      const analysisDocument = document // Ensure pristine data isn't corrupted
       try {
         const grammarPrompt = buildGrammarCorrectionPrompt(document)
         grammarData = await analyzeDocument(null, document, adjustedDomain, grammarPrompt)
         
-        if (grammarData?.corrected_text) {
-           // We secure the CLEAN DATA for the main AI reasoning!
-           analysisDocument = grammarData.corrected_text
-        }
+        // Remove the dangerous pipeline overwrite. Grammar LLM can sometimes hallucinate
+        // the prompt instructions. We do not want to feed a hallucinated prompt into 
+        // the Main Analytics LLM.
       } catch (e) {
         console.warn('Deterministic Grammar Model failed', e)
       }
